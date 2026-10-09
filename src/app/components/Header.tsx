@@ -19,6 +19,7 @@ interface Product {
   nameBn?: string;
   category?: string;
   categoryNameBn?: string;
+  today?: number | string;
   price?: number | string;
   unitBn?: string;
   unit?: string;
@@ -27,9 +28,20 @@ interface Product {
   change?: number | string | { dir?: string; pct?: string | number };
   isUp?: boolean;
   emoji?: string;
-  icon?: string;
+  categoryIcon?: string;
+  image?: string;
   [key: string]: unknown;
 }
+
+// English numbers to Bangla digits converter
+const toBanglaDigit = (num: number | string | undefined | null): string => {
+  if (num === undefined || num === null || num === "") return "০";
+  const banglaDigits: { [key: string]: string } = {
+    "0": "০", "1": "১", "2": "২", "3": "৩", "4": "৪",
+    "5": "৫", "6": "৬", "7": "৭", "8": "৮", "9": "৯",
+  };
+  return String(num).replace(/[0-9]/g, (digit) => banglaDigits[digit] || digit);
+};
 
 export default function Header() {
   const pathname = usePathname();
@@ -47,7 +59,6 @@ export default function Header() {
   const [formattedDate, setFormattedDate] = useState<string>("");
 
   useEffect(() => {
-    //date style
     const today = new Date();
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
@@ -97,9 +108,9 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           
-          {/*  Logo & Dynamic Bangla Date */}
+          {/* Logo & Dynamic Bangla Date */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-12 h-12 rounded-2xl bg-[#009247] p-2 flex items-center justify-center shadow-sm">
+            <div className="relative w-12 h-12 rounded-2xl bg-[#009247] p-2 flex items-center justify-center shadow-xs">
               <Image
                 src="/logo-icon.png"
                 alt="বাজার দর"
@@ -124,7 +135,7 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2.5 p-1.5 pl-2 rounded-full hover:bg-gray-100 transition focus:outline-none"
+                  className="flex items-center gap-2.5 p-1.5 pl-2 rounded-full hover:bg-gray-100 transition focus:outline-hidden"
                 >
                   <div className="w-9 h-9 rounded-full bg-gray-300 overflow-hidden relative">
                     <div className="w-full h-full bg-gray-400 flex items-center justify-center text-white text-sm font-bold">
@@ -229,76 +240,77 @@ export default function Header() {
         </div>
       </div>
 
-      {/* 3. Direct API Ticker Marquee */}
-      <div className="border-t border-gray-200 bg-[#fbfcfb] overflow-hidden py-2 min-h-[46px] flex items-center">
-        {loading ? (
-          <div className="flex gap-4 px-6 w-full animate-pulse">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-7 w-40 bg-gray-200 rounded-lg"></div>
-            ))}
-          </div>
-        ) : products.length > 0 ? (
+     {/* 3. Plain Text Ticker Marquee with FULL HEIGHT Divider Border */}
+<div className="border-y border-gray-200/80 bg-[#f4f7f4] overflow-hidden flex items-stretch h-11">
+  {loading ? (
+    <div className="flex gap-4 px-6 w-full animate-pulse items-center">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="h-6 w-48 bg-gray-200 rounded"></div>
+      ))}
+    </div>
+  ) : products.length > 0 ? (
+    <div
+      className="flex w-max animate-marquee hover:[animation-play-state:paused] items-stretch"
+      style={{ animationDuration: "90s" }}
+    >
+      {[...products, ...products, ...products].map((item, idx) => {
+        const productName = item.nameBn || "পণ্য";
+        
+        // Extract Today price safely from API
+        const rawPrice = item.today ?? item.price ?? "";
+        const priceText = rawPrice !== "" ? toBanglaDigit(rawPrice) : "";
+        
+        const unitRaw = item.unitBn || item.unit || "kg";
+        const unitText = unitRaw === "kg" ? "কেজি" : unitRaw;
+
+        let isUp = true;
+        let changeStr = "০.০%";
+
+        const rawChange = item.changePct ?? item.change_pct ?? item.change;
+        if (rawChange !== undefined && rawChange !== null) {
+          if (typeof rawChange === "object") {
+            const cObj = rawChange as Record<string, unknown>;
+            if (cObj.dir) isUp = cObj.dir === "up";
+            if (cObj.pct !== undefined) changeStr = `${toBanglaDigit(cObj.pct)}%`;
+          } else {
+            const num = parseFloat(String(rawChange).replace("%", "").trim());
+            if (!isNaN(num)) {
+              isUp = num >= 0;
+              changeStr = `${toBanglaDigit(Math.abs(num).toFixed(1))}%`;
+            }
+          }
+        }
+
+        const icon = item.categoryIcon || item.image || item.emoji || item.icon || "🍚";
+
+        return (
           <div
-            className="flex w-max animate-marquee hover:[animation-play-state:paused] items-center gap-3"
-            style={{ animationDuration: "70s" }}
+            key={idx}
+            className="flex items-center gap-3.5 px-6 border-r border-gray-300/80 self-stretch whitespace-nowrap text-base font-semibold text-gray-900"
           >
-            {[...products, ...products, ...products].map((item, idx) => {
-              const productName = item.nameBn || (item.name as string) || "পণ্য";
-              const price = item.price !== undefined && item.price !== null ? item.price : "";
-              const unit = item.unitBn || item.unit || "কেজি";
-
-              let isUp = true;
-              let changeStr = "0%";
-
-              const rawChange = item.changePct ?? item.change_pct ?? item.change;
-              if (rawChange !== undefined && rawChange !== null) {
-                if (typeof rawChange === "object") {
-                  const cObj = rawChange as Record<string, unknown>;
-                  if (cObj.dir) isUp = cObj.dir === "up";
-                  if (cObj.pct) changeStr = `${cObj.pct}%`;
-                } else {
-                  const num = parseFloat(String(rawChange).replace("%", "").trim());
-                  if (!isNaN(num)) {
-                    isUp = num >= 0;
-                    changeStr = `${Math.abs(num)}%`;
-                  } else {
-                    changeStr = String(rawChange);
-                  }
-                }
-              }
-
-              if (item.isUp !== undefined) isUp = Boolean(item.isUp);
-
-              const icon = item.emoji || item.icon || "🍚";
-
-              return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2.5 px-4 py-1.5 bg-white border border-gray-200/80 rounded-lg shadow-2xs whitespace-nowrap text-sm"
-                >
-                  <span className="text-base leading-none">{icon}</span>
-                  <span className="font-semibold text-gray-900">{productName}</span>
-                  {price !== "" && (
-                    <span className="text-gray-600 font-medium">
-                      {price} টাকা/{unit}
-                    </span>
-                  )}
-                  <span
-                    className={`flex items-center gap-1 text-xs font-bold ${
-                      isUp ? "text-[#e53e3e]" : "text-[#10b981]"
-                    }`}
-                  >
-                    <span className="text-[10px]">{isUp ? "▲" : "▼"}</span>
-                    {changeStr}
-                  </span>
-                </div>
-              );
-            })}
+            <span className="text-lg leading-none">{icon}</span>
+            <span className="font-bold text-gray-900">{productName}</span>
+            {priceText && (
+              <span className="text-gray-800 font-semibold">
+                {priceText} টাকা/{unitText}
+              </span>
+            )}
+            <span
+              className={`flex items-center gap-1 font-bold ${
+                isUp ? "text-[#d93838]" : "text-[#009247]"
+              }`}
+            >
+              <span className="text-xs">{isUp ? "▲" : "▼"}</span>
+              {changeStr}
+            </span>
           </div>
-        ) : (
-          <div className="px-6 text-xs text-gray-400">কোনো তথ্য পাওয়া যায়নি</div>
-        )}
-      </div>
+        );
+      })}
+    </div>
+  ) : (
+    <div className="px-6 text-xs text-gray-400 flex items-center">কোনো তথ্য পাওয়া যায়নি</div>
+  )}
+</div>
     </header>
   );
 }
