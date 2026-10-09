@@ -184,16 +184,24 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-3">
                 <Link
-                  href="/login"
-                  className="text-base font-semibold text-gray-900 hover:text-[#009247] transition px-2 py-1"
+                  href="/signin"
+                  className={`px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                    pathname === "/signin"
+                      ? "text-white bg-[#008a3d] hover:bg-[#007a36] shadow-md"
+                      : "text-gray-900 hover:text-[#009247] hover:bg-gray-100"
+                  }`}
                 >
                   সাইন ইন
                 </Link>
                 <Link
-                  href="/register"
-                  className="px-6 py-2.5 text-base font-semibold text-white bg-[#008a3d] hover:bg-[#007a36] rounded-xl shadow-md transition-all duration-200"
+                  href="/signup"
+                  className={`px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                    pathname === "/signup"
+                      ? "text-white bg-[#008a3d] hover:bg-[#007a36] shadow-md"
+                      : "text-gray-900 hover:text-[#009247] hover:bg-gray-100"
+                  }`}
                 >
                   সাইন আপ
                 </Link>
@@ -240,77 +248,76 @@ export default function Header() {
         </div>
       </div>
 
-     {/* 3. Plain Text Ticker Marquee with FULL HEIGHT Divider Border */}
-<div className="border-y border-gray-200/80 bg-[#f4f7f4] overflow-hidden flex items-stretch h-11">
-  {loading ? (
-    <div className="flex gap-4 px-6 w-full animate-pulse items-center">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="h-6 w-48 bg-gray-200 rounded"></div>
-      ))}
-    </div>
-  ) : products.length > 0 ? (
-    <div
-      className="flex w-max animate-marquee hover:[animation-play-state:paused] items-stretch"
-      style={{ animationDuration: "90s" }}
-    >
-      {[...products, ...products, ...products].map((item, idx) => {
-        const productName = item.nameBn || "পণ্য";
-        
-        // Extract Today price safely from API
-        const rawPrice = item.today ?? item.price ?? "";
-        const priceText = rawPrice !== "" ? toBanglaDigit(rawPrice) : "";
-        
-        const unitRaw = item.unitBn || item.unit || "kg";
-        const unitText = unitRaw === "kg" ? "কেজি" : unitRaw;
-
-        let isUp = true;
-        let changeStr = "০.০%";
-
-        const rawChange = item.changePct ?? item.change_pct ?? item.change;
-        if (rawChange !== undefined && rawChange !== null) {
-          if (typeof rawChange === "object") {
-            const cObj = rawChange as Record<string, unknown>;
-            if (cObj.dir) isUp = cObj.dir === "up";
-            if (cObj.pct !== undefined) changeStr = `${toBanglaDigit(cObj.pct)}%`;
-          } else {
-            const num = parseFloat(String(rawChange).replace("%", "").trim());
-            if (!isNaN(num)) {
-              isUp = num >= 0;
-              changeStr = `${toBanglaDigit(Math.abs(num).toFixed(1))}%`;
-            }
-          }
-        }
-
-        const icon = item.categoryIcon || item.image || item.emoji || item.icon || "🍚";
-
-        return (
-          <div
-            key={idx}
-            className="flex items-center gap-3.5 px-6 border-r border-gray-300/80 self-stretch whitespace-nowrap text-base font-semibold text-gray-900"
-          >
-            <span className="text-lg leading-none">{icon}</span>
-            <span className="font-bold text-gray-900">{productName}</span>
-            {priceText && (
-              <span className="text-gray-800 font-semibold">
-                {priceText} টাকা/{unitText}
-              </span>
-            )}
-            <span
-              className={`flex items-center gap-1 font-bold ${
-                isUp ? "text-[#d93838]" : "text-[#009247]"
-              }`}
-            >
-              <span className="text-xs">{isUp ? "▲" : "▼"}</span>
-              {changeStr}
-            </span>
+      {/* 3. Plain Text Ticker Marquee with FULL HEIGHT Divider Border */}
+      <div className="border-y border-gray-200/80 bg-[#f4f7f4] overflow-hidden flex items-stretch h-11">
+        {loading ? (
+          <div className="flex gap-4 px-6 w-full animate-pulse items-center">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-6 w-48 bg-gray-200 rounded"></div>
+            ))}
           </div>
-        );
-      })}
-    </div>
-  ) : (
-    <div className="px-6 text-xs text-gray-400 flex items-center">কোনো তথ্য পাওয়া যায়নি</div>
-  )}
-</div>
+        ) : products.length > 0 ? (
+          <div
+            className="flex w-max animate-marquee hover:[animation-play-state:paused] items-stretch"
+            style={{ animationDuration: "90s" }}
+          >
+            {[...products, ...products, ...products].map((item, idx) => {
+              const productName = item.nameBn || "পণ্য";
+              
+              const rawPrice = item.today ?? item.price ?? "";
+              const priceText = rawPrice !== "" ? toBanglaDigit(rawPrice) : "";
+              
+              const unitRaw = item.unitBn || item.unit || "kg";
+              const unitText = unitRaw === "kg" ? "কেজি" : unitRaw;
+
+              let isUp = true;
+              let changeStr = "০.০%";
+
+              const rawChange = item.changePct ?? item.change_pct ?? item.change;
+              if (rawChange !== undefined && rawChange !== null) {
+                if (typeof rawChange === "object") {
+                  const cObj = rawChange as Record<string, unknown>;
+                  if (cObj.dir) isUp = cObj.dir === "up";
+                  if (cObj.pct !== undefined) changeStr = `${toBanglaDigit(cObj.pct)}%`;
+                } else {
+                  const num = parseFloat(String(rawChange).replace("%", "").trim());
+                  if (!isNaN(num)) {
+                    isUp = num >= 0;
+                    changeStr = `${toBanglaDigit(Math.abs(num).toFixed(1))}%`;
+                  }
+                }
+              }
+
+              const icon = item.categoryIcon || item.image || item.emoji || item.icon || "🍚";
+
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3.5 px-6 border-r border-gray-300/80 self-stretch whitespace-nowrap text-base font-semibold text-gray-900"
+                >
+                  <span className="text-lg leading-none">{icon}</span>
+                  <span className="font-bold text-gray-900">{productName}</span>
+                  {priceText && (
+                    <span className="text-gray-800 font-semibold">
+                      {priceText} টাকা/{unitText}
+                    </span>
+                  )}
+                  <span
+                    className={`flex items-center gap-1 font-bold ${
+                      isUp ? "text-[#d93838]" : "text-[#009247]"
+                    }`}
+                  >
+                    <span className="text-xs">{isUp ? "▲" : "▼"}</span>
+                    {changeStr}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-6 text-xs text-gray-400 flex items-center">কোনো তথ্য পাওয়া যায়নি</div>
+        )}
+      </div>
     </header>
   );
 }
