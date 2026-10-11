@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 interface Category {
   id?: string | number;
@@ -45,14 +47,14 @@ const toBanglaDigit = (num: number | string | undefined | null): string => {
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Auth State
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState({ name: "user" });
+  // Better Auth Session Hook
+  const { data: session, isPending } = authClient.useSession();
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Dynamic Date State
@@ -73,8 +75,8 @@ export default function Header() {
         setLoading(true);
 
         const [catRes, prodRes] = await Promise.all([
-          fetch("https://api.api-store.workers.dev/api/bazardor/categories"),
-          fetch("https://api.api-store.workers.dev/api/bazardor/products"),
+          fetch("https://openapi.programming-hero.com/api/bazardor/categories"),
+          fetch("https://openapi.programming-hero.com/api/bazardor/products"),
         ]);
 
         if (catRes.ok) {
@@ -101,6 +103,19 @@ export default function Header() {
 
     fetchData();
   }, []);
+
+  const handleSignOut = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          toast.success("সফলভাবে সাইন আউট করা হয়েছে!");
+          setShowDropdown(false);
+          router.push("/signin");
+          router.refresh();
+        },
+      },
+    });
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#fcfdfd] border-b border-gray-200 text-gray-800 font-sans">
@@ -129,21 +144,31 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Right Side: Auth Buttons */}
+          {/* Right Side: Auth / Profile Dropdown */}
           <div className="flex items-center gap-5">
-            {isLoggedIn ? (
+            {isPending ? (
+              <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+            ) : session?.user ? (
               <div className="relative">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2.5 p-1.5 pl-2 rounded-full hover:bg-gray-100 transition focus:outline-hidden"
+                  className="flex items-center gap-2.5 p-1.5 pl-2 rounded-full hover:bg-gray-100 transition focus:outline-hidden cursor-pointer"
                 >
-                  <div className="w-9 h-9 rounded-full bg-gray-300 overflow-hidden relative">
-                    <div className="w-full h-full bg-gray-400 flex items-center justify-center text-white text-sm font-bold">
-                      {user.name.charAt(0)}
-                    </div>
+                  <div className="w-9 h-9 rounded-full bg-gray-300 overflow-hidden relative border border-gray-200">
+                    {session.user.image ? (
+                      <img
+                        src={session.user.image}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#009247] flex items-center justify-center text-white text-sm font-bold">
+                        {session.user.name ? session.user.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {user.name}
+                  <span className="text-sm font-semibold text-gray-800 hidden sm:inline">
+                    {session.user.name}
                   </span>
                   <svg
                     className={`w-4 h-4 text-gray-500 transition-transform ${
@@ -163,22 +188,23 @@ export default function Header() {
                 </button>
 
                 {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 space-y-1">
+                    <div className="px-3 py-2 border-b border-gray-100">
+                      <p className="font-bold text-gray-900 text-sm truncate">{session.user.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
+                    </div>
                     <Link
                       href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="block px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 rounded-xl transition"
                       onClick={() => setShowDropdown(false)}
                     >
-                      প্রোফাইল
+                      👤 আমার প্রোফাইল
                     </Link>
                     <button
-                      onClick={() => {
-                        setIsLoggedIn(false);
-                        setShowDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      onClick={handleSignOut}
+                      className="w-full text-left px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer flex items-center gap-1.5"
                     >
-                      সাইন আউট
+                      <span>↪</span> সাইন আউট
                     </button>
                   </div>
                 )}

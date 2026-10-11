@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 
-// API Response Structure 
 interface Product {
   id: string | number;
   slug?: string;
@@ -31,7 +30,6 @@ const getRawPrice = (item: Product): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// 2. Convert English digits to Bangla digits
 const toBanglaDigit = (num: number | string | undefined | null): string => {
   if (num === undefined || num === null || num === "") return "০";
   const banglaDigits: { [key: string]: string } = {
@@ -53,13 +51,12 @@ const getEmojiForProduct = (item: Product): string => {
 export default function ProductSections() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [sortBy, setSortBy] = useState<string>("default");
 
   useEffect(() => {
     async function fetchProducts() {
       try {
         setLoading(true);
-        const res = await fetch("https://api.api-store.workers.dev/api/bazardor/products");
+        const res = await fetch("https://openapi.programming-hero.com/api/bazardor/products");
         if (res.ok) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : data.products || data.data || [];
@@ -92,7 +89,6 @@ export default function ProductSections() {
     return { dir: "flat", pctText: `— ${toBanglaDigit("0.0")}%`, val: 0 };
   };
 
-  // Section A: Top 6 Risers 
   const topRisers = useMemo(() => {
     return [...products]
       .map((p) => ({ product: p, changeInfo: getProductChangeDetails(p) }))
@@ -102,7 +98,6 @@ export default function ProductSections() {
       .map((item) => item.product);
   }, [products]);
 
-  // Section B: Top 6 Fallers
   const topFallers = useMemo(() => {
     return [...products]
       .map((p) => ({ product: p, changeInfo: getProductChangeDetails(p) }))
@@ -112,19 +107,6 @@ export default function ProductSections() {
       .map((item) => item.product);
   }, [products]);
 
-  // Section C: Sort All Products (Pure mathematical sorting using 'today' price)
-  const sortedAllProducts = useMemo(() => {
-    const list = [...products];
-    if (sortBy === "price-asc") {
-      return list.sort((a, b) => getRawPrice(a) - getRawPrice(b));
-    }
-    if (sortBy === "price-desc") {
-      return list.sort((a, b) => getRawPrice(b) - getRawPrice(a));
-    }
-    return list;
-  }, [products, sortBy]);
-
-  // Product Card Component
   const ProductCard = ({ item }: { item: Product }) => {
     const changeInfo = getProductChangeDetails(item);
     const emoji = getEmojiForProduct(item);
@@ -206,7 +188,7 @@ export default function ProductSections() {
           <div className="flex items-center gap-2">
             <span className="text-red-600 text-lg sm:text-xl font-black">▲</span>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-              আজ দাম বেড়েছে
+              আজ দাম বেড়েছে
             </h2>
           </div>
 
@@ -241,46 +223,22 @@ export default function ProductSections() {
           )}
         </section>
 
-        {/* SECTION C: sorting*/}
+        {/* SECTION C: All Products (Without Sort Dropdown) */}
         <section id="সব-পণ্য" className="space-y-4 scroll-mt-28">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                সব পণ্য
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
-                মোট {toBanglaDigit(products.length)}টি পণ্য দেখানো হচ্ছে
-              </p>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <span className="text-xs sm:text-sm font-medium text-gray-600">সাজান:</span>
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-xl px-3.5 py-2 pr-9 text-xs sm:text-sm font-semibold text-gray-700 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-[#009247]/20 focus:border-[#009247] transition-all"
-                >
-                  <option value="default">ডিফল্ট</option>
-                  <option value="price-asc">দাম: কম থেকে বেশি</option>
-                  <option value="price-desc">দাম: বেশি থেকে কম</option>
-                </select>
-
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-500">
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+              সব পণ্য
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+              মোট {toBanglaDigit(products.length)}টি পণ্য দেখানো হচ্ছে
+            </p>
           </div>
 
           {loading ? (
             <SkeletonGrid count={9} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-              {sortedAllProducts.map((p) => (
+              {products.map((p) => (
                 <ProductCard key={p.id} item={p} />
               ))}
             </div>
