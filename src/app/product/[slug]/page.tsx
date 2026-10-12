@@ -10,7 +10,6 @@ const BN: Record<string, string> = {
   "5": "৫", "6": "৬", "7": "৭", "8": "৮", "9": "৯",
 };
 const toBn = (v: string | number) => String(v).replace(/[0-9]/g, (d) => BN[d]);
-// 63.5 -> "৬৩.৫০", 62 -> "৬২"
 const fmt = (n: number) => toBn(Number.isInteger(n) ? n : n.toFixed(2));
 
 const UNIT_BN: Record<string, string> = {
