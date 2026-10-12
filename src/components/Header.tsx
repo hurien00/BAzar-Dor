@@ -305,7 +305,7 @@ export default function Header() {
                 if (typeof rawChange === "object") {
                   const cObj = rawChange as Record<string, unknown>;
                   if (cObj.dir) isUp = cObj.dir === "up";
-                  if (cObj.pct !== undefined) changeStr = `${toBanglaDigit(cObj.pct)}%`;
+                  if (cObj.pct !== undefined && (typeof cObj.pct === "string" || typeof cObj.pct === "number")) changeStr = `${toBanglaDigit(cObj.pct)}%`;
                 } else {
                   const num = parseFloat(String(rawChange).replace("%", "").trim());
                   if (!isNaN(num)) {
@@ -315,7 +315,8 @@ export default function Header() {
                 }
               }
 
-              const icon = item.categoryIcon || item.image || item.emoji || item.icon || "🍚";
+           const rawIcon = item.categoryIcon || item.image || item.emoji || item.icon;
+           const icon = typeof rawIcon === "string" ? rawIcon : "🍚";
 
               return (
                 <div
