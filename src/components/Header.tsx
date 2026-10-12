@@ -251,7 +251,8 @@ export default function Header() {
               categories.map((cat, index) => {
                 const name = cat.nameBn || (cat.name as string) || "";
                 const icon = cat.icon || "📦";
-                const href = `/category/${cat.slug || cat.id || index}`;
+                const catSlug = cat.slug || cat.id || index;
+                const href = `/category/${catSlug}`;
                 const isActive = pathname === href;
 
                 return (
