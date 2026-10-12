@@ -1,4 +1,3 @@
-
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { MongoClient } from "mongodb";
@@ -18,11 +17,11 @@ export const auth = betterAuth({
 
   baseURL: process.env.BETTER_AUTH_URL,
 
+  // Localhost ebong production er BETTER_AUTH_URL automatic trusted hobe
   trustedOrigins: [
-  "http://localhost:3000",
-  "https://bajardoor.vercel.app",
-  "https://bazardor-6ogvwep5e-jannat8.vercel.app",
-],
+    "http://localhost:3000",
+    process.env.BETTER_AUTH_URL || "",
+  ].filter(Boolean),
 
   emailAndPassword: {
     enabled: true,
