@@ -19,9 +19,10 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
 
   trustedOrigins: [
-    "http://localhost:3000",
-    "https://bajardoor.vercel.app",
-  ],
+  "http://localhost:3000",
+  "https://bajardoor.vercel.app",
+  "https://bazardor-6ogvwep5e-jannat8.vercel.app",
+],
 
   emailAndPassword: {
     enabled: true,
