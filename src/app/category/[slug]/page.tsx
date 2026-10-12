@@ -9,7 +9,11 @@ const BN: Record<string, string> = {
   "0": "০", "1": "১", "2": "২", "3": "৩", "4": "৪",
   "5": "৫", "6": "৬", "7": "৭", "8": "৮", "9": "৯",
 };
-const toBn = (v: string | number) => String(v).replace(/[0-9]/g, (d) => BN[d]);
+
+const toBn = (v: string | number | undefined | null) => {
+  if (v === undefined || v === null || v === "") return "০";
+  return String(v).replace(/[0-9]/g, (d) => BN[d] || d);
+};
 
 const UNIT_BN: Record<string, string> = {
   kg: "কেজি",
@@ -27,7 +31,6 @@ type Product = {
   category: string;
   categoryNameBn: string;
   categoryIcon: string;
-  image?: string;
   unit: string;
   today: number;
   yesterday: number;
@@ -54,41 +57,78 @@ export default function CategoryPage() {
     router.replace(`/signin?redirect=${encodeURIComponent(`/category/${slug}`)}`);
   }, [isPending, session, slug, router]);
 
-  // 2. Category product fetch
+  // 2. Fetch and Normalize Category Products
   useEffect(() => {
     if (!session || !slug) return;
     let cancelled = false;
 
-    const toList = (json: any): Product[] => {
+    const normalizeProduct = (item: any): Product => {
+      let dir: "up" | "down" | "flat" = "flat";
+      let pct = 0;
+
+      const rawChange = item.changePct ?? item.change_pct ?? item.change;
+      if (rawChange && typeof rawChange === "object") {
+        if (rawChange.dir) dir = rawChange.dir;
+        if (rawChange.pct !== undefined) pct = parseFloat(rawChange.pct);
+      } else if (rawChange !== undefined && rawChange !== null) {
+        const num = parseFloat(String(rawChange).replace("%", "").trim());
+        if (!isNaN(num)) {
+          dir = num > 0 ? "up" : num < 0 ? "down" : "flat";
+          pct = Math.abs(num);
+        }
+      }
+
+      return {
+        id: item.id || item.slug || Math.random(),
+        slug: item.slug || String(item.id || ""),
+        nameBn: item.nameBn || item.name || "পণ্য",
+        category: item.category || item.categorySlug || slug,
+        categoryNameBn: item.categoryNameBn || item.category || "ক্যাটাগরি",
+        categoryIcon: item.categoryIcon || item.emoji || item.image || item.icon || "📦",
+        unit: item.unitBn || item.unit || "kg",
+        today: item.todayPrice ?? item.today ?? item.price ?? 0,
+        yesterday: item.yesterdayPrice ?? item.yesterday ?? 0,
+        change: { dir, pct },
+      };
+    };
+
+    const extractList = (json: any): any[] => {
       const d = json?.data ?? json;
-      return Array.isArray(d) ? d : Array.isArray(d?.products) ? d.products : [];
+      if (Array.isArray(d)) return d;
+      if (Array.isArray(d?.products)) return d.products;
+      return [];
     };
 
     (async () => {
       setLoading(true);
-      let list: Product[] = [];
+      let rawList: any[] = [];
 
       try {
         const res = await fetch(`${API}?category=${encodeURIComponent(slug)}`);
-        if (res.ok) list = toList(await res.json());
+        if (res.ok) rawList = extractList(await res.json());
       } catch (err) {
         console.error("Category fetch failed:", err);
       }
 
-      // fallback
-      if (!list.length) {
+      if (!rawList.length) {
         try {
           const res = await fetch(API);
-          if (res.ok) list = toList(await res.json()).filter((p) => p.category === slug);
+          if (res.ok) rawList = extractList(await res.json());
         } catch (err) {
           console.error("Fallback fetch failed:", err);
         }
       }
 
-      list = list.filter((p) => p.category === slug);
+      const filtered = rawList
+        .map(normalizeProduct)
+        .filter(
+          (p) =>
+            p.category.toLowerCase() === slug.toLowerCase() ||
+            p.slug.toLowerCase().includes(slug.toLowerCase())
+        );
 
       if (!cancelled) {
-        setProducts(list);
+        setProducts(filtered);
         setLoading(false);
       }
     })();
@@ -106,7 +146,11 @@ export default function CategoryPage() {
   }, [products, sort]);
 
   if (isPending || !session) {
-    return <PageShell><Skeleton /></PageShell>;
+    return (
+      <PageShell>
+        <Skeleton />
+      </PageShell>
+    );
   }
 
   const first = products[0];
@@ -120,8 +164,8 @@ export default function CategoryPage() {
       ) : (
         <>
           {/* Title + icon */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#f5f7f5] flex items-center justify-center text-2xl">
+          <div className="bg-white rounded-2xl border border-gray-200/80 p-5 flex items-center gap-4 shadow-2xs">
+            <div className="w-12 h-12 rounded-xl bg-[#f5f7f5] flex items-center justify-center text-2xl border border-gray-100">
               {first.categoryIcon}
             </div>
             <div>
@@ -132,14 +176,16 @@ export default function CategoryPage() {
             </div>
           </div>
 
-          {/* Sort */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 p-4 flex justify-end items-center gap-3">
-            <label htmlFor="sort" className="text-sm text-gray-500 font-medium">সাজান</label>
+          {/* Sort Control */}
+          <div className="bg-white rounded-2xl border border-gray-200/80 p-4 flex justify-end items-center gap-3 shadow-2xs">
+            <label htmlFor="sort" className="text-sm text-gray-500 font-medium">
+              সাজান
+            </label>
             <select
               id="sort"
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#009247]/30"
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-[#009247]/30 cursor-pointer"
             >
               <option value="default">ডিফল্ট</option>
               <option value="asc">দাম: কম থেকে বেশি</option>
@@ -151,10 +197,10 @@ export default function CategoryPage() {
             মোট {toBn(sorted.length)}টি পণ্য দেখানো হচ্ছে
           </p>
 
-          {/* Product cards */}
+          {/* Product cards list */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sorted.map((p) => (
-              <ProductCard key={p.slug} p={p} />
+              <ProductCard key={p.id} p={p} />
             ))}
           </div>
         </>
@@ -176,19 +222,21 @@ function ProductCard({ p }: { p: Product }) {
   return (
     <Link
       href={`/product/${p.slug}`}
-      className="bg-white rounded-2xl border border-gray-200/80 p-5 hover:shadow-md hover:border-[#009247]/40 transition block"
+      className="bg-white rounded-2xl border border-gray-200/80 p-5 hover:shadow-md hover:border-[#009247]/40 transition group block"
     >
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-[#f5f7f5] flex items-center justify-center text-xl shrink-0">
-          {p.image || p.categoryIcon}
+        <div className="w-11 h-11 rounded-xl bg-[#f5f7f5] flex items-center justify-center text-xl shrink-0 border border-gray-100">
+          {p.categoryIcon}
         </div>
         <div>
-          <h3 className="font-extrabold text-gray-900">{p.nameBn}</h3>
+          <h3 className="font-extrabold text-gray-900 group-hover:text-[#009247] transition">
+            {p.nameBn}
+          </h3>
           <p className="text-xs text-gray-500">প্রতি {UNIT_BN[p.unit] ?? p.unit}</p>
         </div>
       </div>
 
-      <div className="mt-4 flex items-end justify-between">
+      <div className="mt-4 flex items-end justify-between border-t border-gray-100 pt-3">
         <div>
           <span className="text-xs text-gray-500 block">আজকের দাম</span>
           <span className="text-xl font-black text-gray-900">
@@ -217,7 +265,7 @@ function Skeleton() {
       <div className="h-20 bg-white rounded-2xl border border-gray-200/80" />
       <div className="h-16 bg-white rounded-2xl border border-gray-200/80" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-32 bg-white rounded-2xl border border-gray-200/80" />
         ))}
       </div>
@@ -230,10 +278,12 @@ function EmptyState() {
     <div className="bg-white rounded-3xl border border-gray-200/80 py-16 px-6 text-center space-y-3">
       <div className="text-5xl font-black text-gray-300">৪০৪</div>
       <h2 className="text-xl font-extrabold text-gray-900">কোনো পণ্য পাওয়া যায়নি</h2>
-      <p className="text-sm text-gray-500">এই ক্যাটাগরিতে কোনো পণ্য নেই অথবা ক্যাটাগরিটি সঠিক নয়।</p>
+      <p className="text-sm text-gray-500">
+        এই ক্যাটাগরিতে কোনো পণ্য নেই অথবা ক্যাটাগরিটি সঠিক নয়।
+      </p>
       <Link
         href="/"
-        className="inline-block mt-2 bg-[#009247] text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-[#007a3b] transition"
+        className="inline-block mt-2 bg-[#009247] text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-[#007a3b] transition shadow-md"
       >
         হোম পেজে ফিরে যান
       </Link>
